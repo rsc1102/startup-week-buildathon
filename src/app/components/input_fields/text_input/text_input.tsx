@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { LoadScript, Autocomplete } from "@react-google-maps/api";
+import { Autocomplete } from "@react-google-maps/api";
 
 
 export default function TextInput({
@@ -42,11 +42,11 @@ export default function TextInput({
     >
       {svg}
       
-        <Autocomplete onLoad={onLoad} onPlaceChanged={onPlaceChanged} className="w-screen">
+        <Autocomplete onLoad={onLoad} onPlaceChanged={onPlaceChanged} className="w-full">
           <input
             placeholder={placeholder}
             ref={inputRef}
-            className="focus:ring-0 focus:outline-none w-full"
+            className="focus:ring-0 focus:outline-none w-full truncate"
           ></input>
         </Autocomplete>
     </div>
