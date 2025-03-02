@@ -9,20 +9,24 @@ import { useEffect, useState } from "react";
 export default function Map({
   source,
   destination,
-  routeConfirmed,
+  sourceDestinationConfirmed,
+  routeConfirmedCallback,
 }: {
   source: google.maps.places.PlaceResult | null;
   destination: google.maps.places.PlaceResult | null;
-  routeConfirmed: boolean;
+  sourceDestinationConfirmed: boolean;
+  routeConfirmedCallback: () => void;
 }) {
   const [center, setCenter] = useState({
     lat: 37.7749, // Example latitude (San Francisco)
     lng: -122.4194, // Example longitude (San Francisco)
   });
 
+  const [zoom, setZoom] = useState(10);
+
   const [geolocationDone, setGeolocationDone] = useState(false);
 
-  if (navigator.geolocation) {
+  if (!geolocationDone && navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
@@ -41,15 +45,33 @@ export default function Map({
     useState<google.maps.DirectionsResult | null>(null);
 
   const fetchDirections = () => {
-    if (!source || !destination) return;
+    if(!source){
+      alert("Source not identified")
+      return;
+    }
+    if(!destination){
+      alert("Destination not identified")
+      return;
+    }
 
     const directionsService = new google.maps.DirectionsService();
 
-    if(source.geometry && source.geometry.location && destination.geometry && destination.geometry.location){
+    if (
+      source.geometry &&
+      source.geometry.location &&
+      destination.geometry &&
+      destination.geometry.location
+    ) {
       directionsService.route(
         {
-          origin: { lat:source.geometry.location.lat(), lng:source.geometry.location.lng() },
-          destination: { lat:destination.geometry.location.lat(), lng:destination.geometry.location.lng() },
+          origin: {
+            lat: source.geometry.location.lat(),
+            lng: source.geometry.location.lng(),
+          },
+          destination: {
+            lat: destination.geometry.location.lat(),
+            lng: destination.geometry.location.lng(),
+          },
           travelMode: google.maps.TravelMode.DRIVING,
         },
         (result, status) => {
@@ -57,6 +79,7 @@ export default function Map({
             setDirections(result);
             const newCenter = findRouteCenter(result);
             setCenter(newCenter);
+            console.log(result?.routes[0].legs[0].duration);
           } else {
             console.error("Error fetching directions:", status);
           }
@@ -66,8 +89,10 @@ export default function Map({
   };
 
   // Function to calculate the center of the route
-  const findRouteCenter = (directions: google.maps.DirectionsResult|null): google.maps.LatLngLiteral => {
-    if(!directions) return center;
+  const findRouteCenter = (
+    directions: google.maps.DirectionsResult | null
+  ): google.maps.LatLngLiteral => {
+    if (!directions) return center;
     if (!directions.routes.length) return center;
 
     const route = directions.routes[0]; // Get first route
@@ -75,7 +100,7 @@ export default function Map({
 
     if (path.length === 0) return center;
 
-    const middleIndex = Math.floor(path.length / 2); // Get the middle point
+    const middleIndex = Math.floor(path.length / 2 - path.length/10); // Get the middle point
     const midpoint = path[middleIndex];
 
     return { lat: midpoint.lat(), lng: midpoint.lng() };
@@ -83,21 +108,30 @@ export default function Map({
 
   useEffect(() => {
     console.log(center);
-    if(routeConfirmed){
+    if (sourceDestinationConfirmed) {
       fetchDirections();
+      setZoom(12);
+      routeConfirmedCallback();
     }
-  }, [geolocationDone, routeConfirmed]);
+  }, [geolocationDone, sourceDestinationConfirmed]);
 
   return (
     <div className="w-full h-screen rounded-lg overflow-hidden absolute bottom-0 left-0 z-0">
       <GoogleMap
         center={center}
-        zoom={10}
+        zoom={zoom}
         mapContainerClassName="w-full h-full"
         options={{ disableDefaultUI: true }}
       >
-        
-        {directions ? <DirectionsRenderer directions={directions} /> : <Marker position={center} />}
+        {directions ? (
+          <DirectionsRenderer
+            directions={directions}
+            options={{ polylineOptions: { strokeColor: "#FF0000" } }}
+          />
+        ) : (
+          <Marker position={center} />
+        )}
+  
       </GoogleMap>
     </div>
   );

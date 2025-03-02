@@ -3,15 +3,18 @@ import TextInput from "./text_input/text_input";
 export default function InputFields({
   sourcePlaceHandler,
   destinationPlaceHandler,
+  onChange,
 }: {
   sourcePlaceHandler: (place: google.maps.places.PlaceResult) => void;
   destinationPlaceHandler: (place: google.maps.places.PlaceResult) => void;
+  onChange:()=>void;
 }) {
   return (
     <div className="flex flex-col w-90  md:flex-row md:justify-center md:w-full">
       <TextInput
         placeholder="Source"
         onPlaceSelect={sourcePlaceHandler}
+        onChange={onChange}
         svg={
           <svg
             fill="#08fb04"
@@ -27,6 +30,7 @@ export default function InputFields({
       <TextInput
         placeholder="Destination"
         onPlaceSelect={destinationPlaceHandler}
+        onChange={onChange}
         svg={
           <svg
             fill="#fb0404"

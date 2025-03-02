@@ -7,13 +7,27 @@ import Map from "./components/map/map";
 import { LoadScript, Libraries } from "@react-google-maps/api";
 
 export default function Home() {
-  const [routeConfirmed, setRouteConfirmed ] = useState(false);
+  const [sourceDestinationConfirmed, setSourceDestinationConfirmed ] = useState(false);
+  const [routeConfirmed, setRouteConfirmed] = useState(false);
+
   const [tripConfirmed, setTripConfirmed] = useState(false);
 
   function getRouteButtonHandler() {
-    if (routeConfirmed) return;
-    setRouteConfirmed(true);
+    if (sourceDestinationConfirmed) return;
+    setSourceDestinationConfirmed(true);
   }
+
+  function resetGetRouteButtonHandler(){
+    if (!sourceDestinationConfirmed) return;
+    setSourceDestinationConfirmed(false);
+  }
+
+  function routeConfirmedCallback(){
+    setRouteConfirmed(true);
+    console.log(routeConfirmed);
+  }
+
+  
 
   const [sourcePlace, setSourcePlace] =
     useState<google.maps.places.PlaceResult | null>(null);
@@ -34,7 +48,7 @@ export default function Home() {
     <div className="flex flex-col">
       <main className="flex flex-col items-center sm:items-start">
         <LoadScript
-          googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API!}
+          googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}
           libraries={googleAPILibraries}
         >
           <div className="bg-slate-100/90 z-1 w-full flex flex-col justify-center items-center">
@@ -62,13 +76,14 @@ export default function Home() {
             <InputFields
               sourcePlaceHandler={sourcePlaceHandler}
               destinationPlaceHandler={destinationPlaceHandler}
+              onChange={resetGetRouteButtonHandler}
             />
           </div>
 
           {!tripConfirmed ? (
             <div className="w-full flex flex-col items-center ">
-              <Map source={sourcePlace} destination={destinationPlace} routeConfirmed={routeConfirmed}/>
-              {sourcePlace && destinationPlace ? (
+              <Map source={sourcePlace} destination={destinationPlace} sourceDestinationConfirmed={sourceDestinationConfirmed} routeConfirmedCallback={routeConfirmedCallback}/>
+              {sourcePlace && destinationPlace && !sourceDestinationConfirmed ? (
                 <button
                   onClick={getRouteButtonHandler}
                   className="border p-1 rounded-md flex m-1 w-50 items-center bg-lime-500 z-1"
