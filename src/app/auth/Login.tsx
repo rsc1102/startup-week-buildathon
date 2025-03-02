@@ -1,6 +1,7 @@
 import { useState } from 'react';
 // import { useRouter } from 'next/router';
 import BidRides from '../components/driver/BidRides';
+import Rider from '../components/rider/Rider';
 
 export default function Login () {
   // const router = useRouter();
@@ -49,6 +50,9 @@ export default function Login () {
   if (isLoggedIn && isDriver) {
     return <BidRides />;
   }
+  else if (isLoggedIn && !isDriver) {
+    return <Rider/>;
+}
 
   return (
     <div
