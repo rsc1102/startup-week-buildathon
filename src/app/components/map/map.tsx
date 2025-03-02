@@ -1,9 +1,4 @@
-import {
-  GoogleMap,
-  Marker,
-  DirectionsService,
-  DirectionsRenderer,
-} from "@react-google-maps/api";
+import { GoogleMap, Marker, DirectionsRenderer } from "@react-google-maps/api";
 import { useEffect, useState } from "react";
 
 export default function Map({
@@ -43,14 +38,15 @@ export default function Map({
 
   const [directions, setDirections] =
     useState<google.maps.DirectionsResult | null>(null);
+  const [travelTime, setTravelTime] = useState<string | undefined>("");
 
   const fetchDirections = () => {
-    if(!source){
-      alert("Source not identified")
+    if (!source) {
+      alert("Source not identified");
       return;
     }
-    if(!destination){
-      alert("Destination not identified")
+    if (!destination) {
+      alert("Destination not identified");
       return;
     }
 
@@ -79,7 +75,7 @@ export default function Map({
             setDirections(result);
             const newCenter = findRouteCenter(result);
             setCenter(newCenter);
-            console.log(result?.routes[0].legs[0].duration);
+            setTravelTime(result?.routes[0].legs[0].duration?.text);
           } else {
             console.error("Error fetching directions:", status);
           }
@@ -100,7 +96,7 @@ export default function Map({
 
     if (path.length === 0) return center;
 
-    const middleIndex = Math.floor(path.length / 2 - path.length/10); // Get the middle point
+    const middleIndex = Math.floor(path.length / 2 - path.length / 10); // Get the middle point
     const midpoint = path[middleIndex];
 
     return { lat: midpoint.lat(), lng: midpoint.lng() };
@@ -111,7 +107,6 @@ export default function Map({
     if (sourceDestinationConfirmed) {
       fetchDirections();
       setZoom(12);
-      routeConfirmedCallback();
     }
   }, [geolocationDone, sourceDestinationConfirmed]);
 
@@ -131,8 +126,21 @@ export default function Map({
         ) : (
           <Marker position={center} />
         )}
-  
       </GoogleMap>
+      {directions ? (
+        <div className=" fixed bottom-10 w-full flex justify-center  bg-slate-50/80 z-1">
+          <div className="flex flex-col">
+            <h1 className="text-center text-4xl">Travel Time</h1>
+            <h1 className="text-center text-6xl">{travelTime}</h1>
+            <button
+              onClick={routeConfirmedCallback}
+              className="text-center text-2xl border m-2 p-2 rounded-xl bg-green-700/90 hover:bg-green-800/90 active:bg-green-800/90 text-white cursor-pointer"
+            >
+              Confirm Route
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

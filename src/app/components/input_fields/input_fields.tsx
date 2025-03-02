@@ -4,10 +4,12 @@ export default function InputFields({
   sourcePlaceHandler,
   destinationPlaceHandler,
   onChange,
+  inputDisabled,
 }: {
   sourcePlaceHandler: (place: google.maps.places.PlaceResult) => void;
   destinationPlaceHandler: (place: google.maps.places.PlaceResult) => void;
   onChange:()=>void;
+  inputDisabled:boolean;
 }) {
   return (
     <div className="flex flex-col w-90  md:flex-row md:justify-center md:w-full">
@@ -15,6 +17,7 @@ export default function InputFields({
         placeholder="Source"
         onPlaceSelect={sourcePlaceHandler}
         onChange={onChange}
+        inputDisabled={inputDisabled}
         svg={
           <svg
             fill="#08fb04"
@@ -31,6 +34,7 @@ export default function InputFields({
         placeholder="Destination"
         onPlaceSelect={destinationPlaceHandler}
         onChange={onChange}
+        inputDisabled={inputDisabled}
         svg={
           <svg
             fill="#fb0404"

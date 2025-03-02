@@ -8,12 +8,14 @@ export default function TextInput({
   onPlaceSelect,
   placeholder,
   svg,
-  onChange
+  onChange,
+  inputDisabled
 }: {
   onPlaceSelect:(place:google.maps.places.PlaceResult)=>void,
   placeholder: string;
   svg: React.ReactNode;
   onChange: () => void;
+  inputDisabled:boolean
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   
@@ -50,6 +52,7 @@ export default function TextInput({
             ref={inputRef}
             className="focus:ring-0 focus:outline-none w-full truncate"
             onChange={onChange}
+            disabled={inputDisabled}
           ></input>
         </Autocomplete>
     </div>
