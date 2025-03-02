@@ -1,64 +1,207 @@
-"use client";
+// src/app/components/rider/Rider.tsx
+'use client';
 
-import { useState } from "react";
-import InputFields from "../input_fields/input_fields";
-import UserBidingComponent from "../user_biding_component/user_biding_component";
-import Map from "../map/map";
-import { LoadScript } from "@react-google-maps/api";
+import { useState, useEffect } from "react";
+import useSocket from "@/app/hooks/useSocket";
+
+interface Ride {
+  id: number;
+  sourceName: string;
+  destinationName: string;
+  source:{lat: number; lng: number};
+  destination:{lat: number; lng: number};
+  currentBid: number;
+  distance: number;
+  riderId: string;
+}
+
+interface BidNotification {
+  rideId: number;
+  newBid: number;
+  driverId: string;
+}
 
 export default function Rider() {
-  const [tripConfirmed, setTripConfirmed] = useState(false);
-//   const [tripStatus, setTripStatus] = useState(false);
-
-  function confirmButtonHandler() {
-    if (tripConfirmed) return;
-    setTripConfirmed(true);
-  }
-
+  const riderId = "rider-" + Math.floor(Math.random() * 1000); // In a real app, from auth
+  const { socket, isConnected } = useSocket(riderId);
+  
+  const [myRides, setMyRides] = useState<Ride[]>([]);
+  const [newRideSource, setNewRideSource] = useState("");
+  const [newRideDestination, setNewRideDestination] = useState("");
+  const [newRideDistance, setNewRideDistance] = useState("");
+  const [newRideStartingBid, setNewRideStartingBid] = useState("");
+  const [bidNotifications, setBidNotifications] = useState<BidNotification[]>([]);
+  
+  useEffect(() => {
+    if (!socket) return;
+    
+    // Listen for all active rides and filter mine
+    socket.on('activeRides', (activeRides: Ride[]) => {
+      setMyRides(activeRides.filter(ride => ride.riderId === riderId));
+    });
+    
+    // Listen for new bids on my rides
+    socket.on('newBidOnYourRide', (notification: BidNotification) => {
+      setBidNotifications(prev => [...prev, notification]);
+      
+      // Also update the ride in my list
+      setMyRides(prev => prev.map(ride => 
+        ride.id === notification.rideId 
+          ? { ...ride, currentBid: notification.newBid } 
+          : ride
+      ));
+    });
+    
+    // Listen for ride removals
+    socket.on('rideRemoved', (rideId: number) => {
+      setMyRides(prev => prev.filter(ride => ride.id !== rideId));
+      setBidNotifications(prev => prev.filter(n => n.rideId !== rideId));
+    });
+    
+    return () => {
+      socket.off('activeRides');
+      socket.off('newBidOnYourRide');
+      socket.off('rideRemoved');
+    };
+  }, [socket, riderId]);
+  
+  const createNewRide = () => {
+    if (socket && isConnected) {
+      const startingBid = parseFloat(newRideStartingBid);
+      const distance = parseFloat(newRideDistance);
+      
+      if (!newRideSource || !newRideDestination || isNaN(startingBid) || isNaN(distance)) {
+        alert("Please fill in all fields with valid values");
+        return;
+      }
+      
+      socket.emit('createRide', {
+        source: newRideSource,
+        destination: newRideDestination,
+        currentBid: startingBid,
+        distance: distance,
+        riderId: riderId
+      });
+      
+      // Clear form
+      setNewRideSource("");
+      setNewRideDestination("");
+      setNewRideDistance("");
+      setNewRideStartingBid("");
+    }
+  };
+  
+  const acceptBid = (rideId: number, driverId: string) => {
+    if (socket && isConnected) {
+      socket.emit('acceptBid', { rideId, driverId });
+      setMyRides(prev => prev.filter(ride => ride.id !== rideId));
+      setBidNotifications(prev => prev.filter(n => n.rideId !== rideId));
+    }
+  };
+  
   return (
-    <div className="flex flex-col">
-      <main className="flex flex-col items-center sm:items-start">
-      <LoadScript googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API!} libraries={["places"]}>
-        <div className="bg-slate-100/90 z-1 w-full">
-          <div className="flex justify-center">
-            <svg
-              fill="#000000"
-              className="w-20 h-20"
-              viewBox="0 0 30 30"
-              xmlns="http://www.w3.org/2000/svg"
-              xmlnsXlink="http://www.w3.org/1999/xlink"
-            >
-              <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
-              <g
-                id="SVGRepo_tracerCarrier"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              ></g>
-              <g id="SVGRepo_iconCarrier">
-                <path d="M13.220703 3C12.790703 3 12.407484 3.2745938 12.271484 3.6835938L12.166016 4L10.599609 4C7.9996094 4 5.8331875 5.9939375 5.6171875 8.5859375L5.3144531 12.220703C3.9676367 12.707902 3 13.985076 3 15.5L3 21C2.448 21 2 21.448 2 22C2 22.552 2.448 23 3 23L4 23L4 24C4 25.105 4.895 26 6 26C7.105 26 8 25.105 8 24L8 23L22 23L22 24C22 25.105 22.895 26 24 26C25.105 26 26 25.105 26 24L26 23L27 23C27.552 23 28 22.552 28 22C28 21.448 27.552 21 27 21L27 15.5C27 13.985076 26.032363 12.707902 24.685547 12.220703L24.382812 8.5859375C24.166812 5.9939375 21.999437 4 19.398438 4L17.833984 4L17.728516 3.6835938C17.592516 3.2745937 17.210297 3 16.779297 3L13.220703 3 z M 10.601562 6L19.400391 6C20.948391 6 22.261625 7.2089531 22.390625 8.7519531L22.667969 12.111328C22.659598 12.113406 22.650934 12.115068 22.642578 12.117188C20.883578 11.581188 18.238 11 15 11C11.762 11 9.1164219 11.581187 7.3574219 12.117188C7.3490659 12.115068 7.340402 12.113406 7.3320312 12.111328L7.6113281 8.7519531C7.7403281 7.2089531 9.0535625 6 10.601562 6 z M 6.5 14C7.328 14 8 14.672 8 15.5C8 16.328 7.328 17 6.5 17C5.672 17 5 16.328 5 15.5C5 14.672 5.672 14 6.5 14 z M 15 14C16.657 14 18 15.343 18 17L18 20C18 20.552 17.552 21 17 21L13 21C12.448 21 12 20.552 12 20L12 17C12 15.343 13.343 14 15 14 z M 23.5 14C24.328 14 25 14.672 25 15.5C25 16.328 24.328 17 23.5 17C22.672 17 22 16.328 22 15.5C22 14.672 22.672 14 23.5 14 z"></path>
-              </g>
-            </svg>
-            <h1 className="text-4xl p-2 m-2 "> HaggleCab</h1>
+    <div className="max-w-2xl mx-auto p-4">
+      <h1 className="text-xl font-bold mb-4">Create a New Ride Request</h1>
+      
+      {!isConnected && (
+        <p className="text-center text-red-500 mb-4">Connecting to server...</p>
+      )}
+      
+      <div className="p-4 border rounded shadow-md mb-6">
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">From</label>
+            <input
+              type="text"
+              value={newRideSource}
+              onChange={(e) => setNewRideSource(e.target.value)}
+              className="border p-2 w-full rounded"
+              placeholder="Enter pickup location"
+            />
           </div>
-
-          <InputFields />
+          <div>
+            <label className="block text-sm font-medium mb-1">To</label>
+            <input
+              type="text"
+              value={newRideDestination}
+              onChange={(e) => setNewRideDestination(e.target.value)}
+              className="border p-2 w-full rounded"
+              placeholder="Enter destination"
+            />
+          </div>
         </div>
-
-        {!tripConfirmed ? (
-          <div className="w-full flex flex-col items-center ">
-            <Map />
-            <button
-              onClick={confirmButtonHandler}
-              className="border p-1 rounded-md flex m-1 w-50 items-center bg-lime-300 z-1"
-            >
-              <span className="w-full">Confirm</span>
-            </button>
+        
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Distance (miles)</label>
+            <input
+              type="number"
+              value={newRideDistance}
+              onChange={(e) => setNewRideDistance(e.target.value)}
+              className="border p-2 w-full rounded"
+              placeholder="Estimated distance"
+            />
           </div>
-        ) : (
-          <UserBidingComponent />
-        )}
-        </LoadScript>
-      </main>
+          <div>
+            <label className="block text-sm font-medium mb-1">Starting Bid ($)</label>
+            <input
+              type="number"
+              value={newRideStartingBid}
+              onChange={(e) => setNewRideStartingBid(e.target.value)}
+              className="border p-2 w-full rounded"
+              placeholder="Maximum amount"
+            />
+          </div>
+        </div>
+        
+        <button
+          onClick={createNewRide}
+          className="w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+          disabled={!isConnected}
+        >
+          Create Ride Request
+        </button>
+      </div>
+      
+      <h2 className="text-xl font-bold mb-4">Your Active Ride Requests</h2>
+      
+      {myRides.length === 0 ? (
+        <p className="text-center py-4 text-gray-500">You have no active ride requests.</p>
+      ) : (
+        <ul className="space-y-4">
+          {myRides.map((ride) => (
+            <li key={ride.id} className="p-4 border rounded shadow-md">
+              <p className="font-semibold">{ride.sourceName} → {ride.destinationName}</p>
+              <div className="flex justify-between mt-2">
+                <p>Current Bid: <span className="font-bold">${ride.currentBid}</span></p>
+                <p>Distance: <span className="font-bold">{ride.distance} miles</span></p>
+              </div>
+              
+              {/* Display bid notifications for this ride */}
+              {bidNotifications.filter(n => n.rideId === ride.id).length > 0 && (
+                <div className="mt-4">
+                  <h3 className="font-semibold">New Bids:</h3>
+                  <ul className="divide-y">
+                    {bidNotifications
+                      .filter(n => n.rideId === ride.id)
+                      .map((notification, index) => (
+                        <li key={index} className="py-2 flex justify-between items-center">
+                          <span>Driver bid: <span className="font-bold">${notification.newBid}</span></span>
+                          <button
+                            onClick={() => acceptBid(notification.rideId, notification.driverId)}
+                            className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
+                          >
+                            Accept Bid
+                          </button>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
